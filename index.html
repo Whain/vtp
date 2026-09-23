@@ -1,0 +1,825 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Продаём воздух</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --ink:#0E1116;
+  --ink2:#151A21;
+  --ink3:#1D242E;
+  --line:#28313D;
+  --gold:#C9982F;
+  --gold-hi:#E8C15F;
+  --bone:#E9E5DB;
+  --mute:#899099;
+  --red:#CC4A3E;
+  --red-dim:#3A1F1D;
+  --green:#4E9C6B;
+  --green-dim:#17301F;
+  --display:'Unbounded','Arial Black',system-ui,sans-serif;
+  --body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --mono:'IBM Plex Mono','SFMono-Regular',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--ink);
+  color:var(--bone);
+  font-family:var(--body);
+  overflow:hidden;
+  height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--gold-hi);outline-offset:3px}
+
+/* ---------- frame ---------- */
+.rail{
+  position:fixed;top:0;left:0;right:0;height:44px;z-index:40;
+  display:flex;align-items:center;gap:18px;
+  padding:0 clamp(16px,2.6vw,44px);
+  border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(14,17,22,.96),rgba(14,17,22,.82));
+  backdrop-filter:blur(6px);
+  font-family:var(--mono);font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--mute);
+}
+.rail .sect{color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail .spacer{flex:1}
+.rail .keys{display:flex;gap:6px;white-space:nowrap}
+.rail .keys button{
+  font-family:var(--mono);font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--mute);
+  border:1px solid transparent;border-radius:2px;padding:5px 9px;transition:color .15s,border-color .15s;
+}
+.rail .keys button:hover{color:var(--bone);border-color:var(--line)}
+.rail .keys button.act{color:var(--gold);border-color:#4A3A19}
+.rail .keys b{color:var(--gold);font-weight:600;margin-right:5px}
+
+/* ---------- bottom nav ---------- */
+.nav{
+  position:fixed;left:0;right:0;bottom:0;height:38px;z-index:42;
+  display:flex;align-items:center;gap:8px;
+  padding:0 clamp(16px,2.6vw,44px);
+  border-top:1px solid var(--line);
+  background:linear-gradient(0deg,rgba(14,17,22,.96),rgba(14,17,22,.78));
+  backdrop-filter:blur(6px);
+}
+.nav .hint{font-family:var(--mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:#666D76}
+.nav .spacer{flex:1}
+.nav button{
+  font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);
+  border:1px solid var(--line);border-radius:2px;padding:5px 14px;transition:color .15s,border-color .15s;
+}
+.nav button:hover:not(:disabled){color:var(--gold);border-color:var(--gold)}
+.nav button:disabled{opacity:.32;cursor:default}
+.nav .mins{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--gold);text-transform:uppercase}
+.rail .num{color:var(--bone);font-variant-numeric:tabular-nums}
+.rail .clock{
+  font-family:var(--mono);font-size:12px;color:var(--bone);font-variant-numeric:tabular-nums;
+  letter-spacing:.06em;border:1px solid var(--line);border-radius:2px;padding:5px 10px;
+}
+.rail .clock:hover{border-color:var(--gold)}
+.rail .clock.over{color:var(--red)}
+.rail .clock.idle{color:var(--mute)}
+.progress{position:fixed;top:44px;left:0;height:2px;background:var(--gold);z-index:41;transition:width .28s ease}
+
+/* ---------- slides ---------- */
+.deck{position:relative;height:100vh;padding-top:46px}
+.slide{
+  position:absolute;inset:46px 0 0 0;
+  display:none;flex-direction:column;
+  padding:clamp(18px,3.2vh,40px) clamp(20px,4.4vw,84px) clamp(46px,6vh,64px);
+  overflow-y:auto;
+}
+.slide.on{display:flex;animation:rise .34s cubic-bezier(.2,.7,.3,1)}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.slide.on{animation:none}.progress{transition:none}}
+
+.eyebrow{
+  font-family:var(--mono);font-size:clamp(10px,.85vw,12px);letter-spacing:.2em;
+  text-transform:uppercase;color:var(--gold);margin-bottom:.9em;
+}
+h1{
+  font-family:var(--display);font-weight:900;line-height:.94;letter-spacing:-.015em;
+  font-size:clamp(30px,5.6vw,76px);margin:0;text-wrap:balance;
+}
+h2{
+  font-family:var(--display);font-weight:700;line-height:1.02;letter-spacing:-.01em;
+  font-size:clamp(21px,2.9vw,42px);margin:0 0 .5em;text-wrap:balance;
+}
+h3{font-family:var(--display);font-weight:700;font-size:clamp(14px,1.28vw,19px);line-height:1.2;margin:0}
+p{margin:0 0 .7em;line-height:1.5;font-size:clamp(13px,1.08vw,17px);color:#CFCBC1}
+p.lead{font-size:clamp(15px,1.35vw,21px);color:var(--bone);max-width:62ch}
+.dim{color:var(--mute)}
+.gold{color:var(--gold-hi)}
+strong{color:var(--bone);font-weight:600}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.body-max{max-width:66ch}
+
+/* ---------- title ---------- */
+.title-wrap{flex:1;display:flex;flex-direction:column;justify-content:center;gap:clamp(14px,2.4vh,30px)}
+.title-wrap h1{font-size:clamp(38px,7.4vw,108px)}
+.kicker{
+  font-family:var(--mono);font-size:clamp(10px,.9vw,13px);letter-spacing:.24em;
+  text-transform:uppercase;color:var(--gold);
+}
+.rule{height:3px;background:var(--gold);width:clamp(80px,14vw,190px)}
+.team{display:flex;flex-wrap:wrap;gap:10px}
+.team span{
+  font-family:var(--mono);font-size:clamp(11px,.92vw,14px);
+  border:1px dashed var(--line);border-radius:2px;padding:7px 13px;color:var(--mute);
+}
+.team span.me{border-style:solid;border-color:var(--gold);color:var(--gold-hi)}
+
+/* ---------- generic layout ---------- */
+.cols{display:grid;gap:clamp(14px,1.9vw,30px);align-items:start}
+.c2{grid-template-columns:1fr 1fr}
+.c3{grid-template-columns:repeat(3,1fr)}
+.c2u{grid-template-columns:1.15fr .85fr}
+.c2w{grid-template-columns:.72fr 1.28fr}
+.grow{flex:1;min-height:0}
+
+.panel{background:var(--ink2);border:1px solid var(--line);padding:clamp(13px,1.4vw,22px);border-radius:3px}
+.panel.warm{background:#191510;border-color:#3B2F18}
+.panel.bad{background:var(--red-dim);border-color:#4E2A26}
+.panel.good{background:var(--green-dim);border-color:#264534}
+
+.stack{display:flex;flex-direction:column;gap:clamp(9px,1.15vh,15px)}
+.row-item{display:grid;grid-template-columns:auto 1fr;gap:clamp(11px,1.2vw,18px);align-items:start}
+.marker{
+  font-family:var(--mono);font-size:clamp(11px,.95vw,14px);font-weight:600;
+  color:var(--ink);background:var(--gold);width:2em;height:2em;flex:none;
+  display:grid;place-items:center;border-radius:2px;
+}
+.marker.ghost{background:none;color:var(--gold);border:1px solid var(--line)}
+.marker.x{background:var(--red);color:#fff}
+
+.tag{
+  font-family:var(--mono);font-size:clamp(9.5px,.78vw,11.5px);letter-spacing:.11em;text-transform:uppercase;
+  color:var(--mute);border:1px solid var(--line);padding:3px 8px;border-radius:2px;display:inline-block;
+}
+.tag.g{color:var(--gold);border-color:#4A3A19}
+.tag.r{color:var(--red);border-color:#4E2A26}
+.src{font-family:var(--mono);font-size:clamp(9.5px,.76vw,11.5px);color:#6E757E;letter-spacing:.02em}
+
+/* ---------- funnel ---------- */
+.funnel{display:flex;flex-direction:column;gap:6px;align-items:center;width:100%}
+.fl{
+  width:var(--w);max-width:100%;
+  display:grid;grid-template-columns:clamp(88px,10vw,150px) 1fr;
+  gap:clamp(10px,1.4vw,22px);align-items:center;
+  padding:clamp(8px,1.05vh,15px) clamp(12px,1.4vw,22px);
+  border:1px solid var(--line);background:var(--ink2);border-radius:2px;
+}
+.fl .lv{font-family:var(--mono);font-size:clamp(9.5px,.8vw,12px);letter-spacing:.14em;color:var(--gold)}
+.fl .vl{font-family:var(--display);font-weight:700;font-size:clamp(12px,1.16vw,18px);line-height:1.22}
+.fl .nt{font-size:clamp(11px,.9vw,13.5px);color:var(--mute);line-height:1.35;margin-top:2px}
+.fl.pick{border-color:var(--gold);background:#1A1509}
+.fl.pick .vl{color:var(--gold-hi)}
+
+/* ---------- offer mock ---------- */
+.offer{
+  background:radial-gradient(120% 140% at 50% 0%,#1F1a0C 0%,#12100B 60%,#0E1116 100%);
+  border:1px solid #4A3A19;border-radius:4px;padding:clamp(16px,2vw,30px);
+  display:flex;flex-direction:column;gap:clamp(8px,1.1vh,14px);position:relative;
+}
+.urgent{
+  align-self:flex-start;font-family:var(--mono);font-size:clamp(9.5px,.78vw,11.5px);
+  letter-spacing:.16em;text-transform:uppercase;background:var(--red);color:#fff;padding:4px 10px;border-radius:2px;
+}
+.offer .oh{font-family:var(--display);font-weight:900;font-size:clamp(19px,2.5vw,38px);line-height:1;color:var(--gold-hi)}
+.price{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;font-family:var(--mono)}
+.price .old{font-size:clamp(14px,1.3vw,20px);color:var(--mute);text-decoration:line-through}
+.price .new{font-size:clamp(24px,3.2vw,48px);font-weight:600;color:var(--bone)}
+.rassr{font-family:var(--mono);font-size:clamp(12px,1.05vw,16px);color:var(--gold);border:1px solid #4A3A19;padding:6px 12px;border-radius:2px;align-self:flex-start}
+.promises{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:7px}
+.promises li{display:flex;gap:9px;align-items:baseline;font-size:clamp(12px,1vw,15.5px);color:#CFCBC1}
+.promises .ck{color:var(--gold);font-family:var(--mono)}
+.pin{
+  font-family:var(--mono);font-size:11px;font-weight:600;background:var(--red);color:#fff;
+  width:19px;height:19px;border-radius:50%;display:inline-grid;place-items:center;flex:none;margin-left:8px;
+  vertical-align:middle;
+}
+.verdict{display:flex;flex-direction:column;gap:clamp(9px,1.2vh,15px)}
+.vd{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start}
+.vd .pin{margin:2px 0 0}
+
+/* ---------- bars ---------- */
+.bars{display:flex;flex-direction:column;gap:clamp(7px,.95vh,12px)}
+.bar-row{display:grid;grid-template-columns:1fr clamp(120px,17vw,260px) clamp(52px,5vw,72px);gap:clamp(10px,1.3vw,20px);align-items:center}
+.bar-row .lb{font-size:clamp(11.5px,.96vw,15px);line-height:1.3}
+.bar-row .lb small{display:block;font-family:var(--mono);font-size:clamp(9.5px,.76vw,11.5px);color:#6E757E;margin-top:2px}
+.track{position:relative;height:clamp(16px,1.9vh,24px);background:var(--ink2);border:1px solid var(--line);border-radius:2px}
+.track::before{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:#3A4552}
+.track .fill{position:absolute;top:0;bottom:0;border-radius:1px}
+.track .fill.neg{right:50%;background:linear-gradient(90deg,var(--red),#9B3A31)}
+.track .fill.pos{left:50%;background:linear-gradient(90deg,#3C7C55,var(--green))}
+.bar-row .val{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:clamp(12px,1.05vw,16px);text-align:right}
+.val.n{color:var(--red)}
+.val.p{color:var(--green)}
+.scale{display:grid;grid-template-columns:1fr clamp(120px,17vw,260px) clamp(52px,5vw,72px);gap:clamp(10px,1.3vw,20px);font-family:var(--mono);font-size:clamp(9px,.74vw,11px);color:#6E757E}
+.scale .ticks{display:flex;justify-content:space-between}
+.bar-row.big .lb{font-family:var(--display);font-weight:700;font-size:clamp(13px,1.25vw,20px)}
+.bar-row.big .track{height:clamp(22px,2.7vh,34px)}
+.bar-row.total{border-top:1px solid var(--line);padding-top:clamp(9px,1.2vh,15px);margin-top:4px}
+.bar-row.total .val{font-size:clamp(17px,1.7vw,26px);font-weight:600}
+
+/* ---------- misc blocks ---------- */
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:clamp(11px,1.4vw,20px)}
+.fig .n{font-family:var(--display);font-weight:900;font-size:clamp(26px,3.4vw,50px);line-height:1;color:var(--gold-hi);font-variant-numeric:tabular-nums}
+.fig .n.bad{color:var(--red)}
+.fig .n.good{color:var(--green)}
+.fig .c{font-size:clamp(11.5px,.94vw,14px);color:var(--mute);line-height:1.35;margin-top:8px}
+.voided{position:relative;overflow:hidden}
+.voided::after{
+  content:"ПРИГОВОР";position:absolute;top:14px;right:-42px;
+  background:var(--red);color:#fff;font-family:var(--mono);font-size:10px;letter-spacing:.18em;
+  padding:4px 44px;transform:rotate(38deg);
+}
+.qt{border-left:2px solid var(--gold);padding-left:14px;font-style:italic;color:#B9B4A9;font-size:clamp(11.5px,.96vw,15px);line-height:1.45}
+
+/* ---------- overlays ---------- */
+.ov{
+  position:fixed;inset:0;z-index:60;background:rgba(8,10,14,.96);
+  padding:clamp(20px,4vh,52px) clamp(20px,4.4vw,84px);overflow-y:auto;
+}
+.ov h2{margin-bottom:.35em}
+.ov .close{position:absolute;top:14px;right:clamp(20px,4.4vw,84px);font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--mute);text-transform:uppercase}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(178px,1fr));gap:11px;margin-top:20px}
+.th{
+  text-align:left;border:1px solid var(--line);background:var(--ink2);padding:11px 13px;border-radius:2px;
+  display:flex;flex-direction:column;gap:6px;min-height:76px;
+}
+.th:hover,.th:focus-visible{border-color:var(--gold)}
+.th .i{font-family:var(--mono);font-size:10px;color:var(--gold);letter-spacing:.1em}
+.th .t{font-size:12.5px;line-height:1.25;color:var(--bone)}
+.th.cur{border-color:var(--gold);background:#1A1509}
+.plan{width:100%;border-collapse:collapse;margin-top:18px;font-size:clamp(11.5px,.95vw,14.5px)}
+.plan th,.plan td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.plan th{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);font-weight:500}
+.plan td.m{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--gold);white-space:nowrap}
+.plan td.who{font-family:var(--mono);color:var(--bone);white-space:nowrap}
+.hidden{display:none!important}
+
+/* ---------- nav zones ---------- */
+.zone{position:fixed;top:46px;bottom:0;width:13vw;z-index:20;background:none;border:none}
+.zone.l{left:0;cursor:w-resize}
+.zone.r{right:0;cursor:e-resize}
+
+@media (max-width:780px){
+  .c2,.c3,.c2u,.c2w{grid-template-columns:1fr}
+  .bar-row,.scale{grid-template-columns:1fr 1fr 52px}
+  .rail{gap:8px;padding:0 12px}
+  .rail .keys button b{margin-right:0}
+  .rail .keys button span{display:none}
+  .nav .hint{display:none}
+  .fl{grid-template-columns:1fr}
+  .zone{display:none}
+}
+</style>
+
+<div class="rail">
+  <span class="sect" id="sect">Титул</span>
+  <span class="spacer"></span>
+  <span class="keys">
+    <button type="button" id="btnO"><b>O</b><span>обзор</span></button>
+    <button type="button" id="btnP"><b>P</b><span>план</span></button>
+    <button type="button" id="btnT"><b>T</b><span>таймер</span></button>
+  </span>
+  <button type="button" class="clock idle" id="clock" title="Пуск / пауза. Двойной клик — сброс">45:00</button>
+  <span class="num"><span id="cur">1</span>/<span id="tot">24</span></span>
+</div>
+<div class="progress" id="prog" style="width:4%"></div>
+
+<button class="zone l" id="zl" aria-label="Предыдущий слайд"></button>
+<button class="zone r" id="zr" aria-label="Следующий слайд"></button>
+
+<div class="deck" id="deck">
+
+<!-- 1 -->
+<section class="slide on" data-sect="Титул" data-min="1">
+  <div class="title-wrap">
+    <div class="kicker">Практика 1 · ФИТИП · 2026</div>
+    <h1>Продаём<br>воздух</h1>
+    <div class="rule"></div>
+    <p class="lead">Анализ рынка и PEST-анализ сегмента онлайн-курсов от частных экспертов и блогеров. Россия, 2021–2026.</p>
+    <div class="team">
+      <span class="me">Эксперт 1 — Алексей</span>
+      <span>Эксперт 2 — Павел</span>
+      <span>Эксперт 3 — Иван</span>
+      <span>Эксперт 4 — Мария</span>
+      <span>Эксперт 5 — Артур</span>
+    </div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="slide" data-sect="О чём доклад" data-min="1">
+  <div class="eyebrow">Рамка доклада</div>
+  <h2>Мы разбираем не «плохих людей»,<br>а бизнес-модель</h2>
+  <div class="cols c2 grow">
+    <div class="stack">
+      <p class="lead">В обиходе сегмент называют инфоцыганством. Для анализа это бесполезное слово: оно описывает эмоцию, а не рынок.</p>
+      <p>Мы работаем с проверяемым определением: <strong>продажа информационного продукта физическому лицу с обещанием роста его дохода, вне системы лицензированного образования.</strong></p>
+      <p>Такое определение даёт границы, игроков, юрлица, судебные решения и цифры выручки — то есть всё, из чего собирается PEST.</p>
+    </div>
+    <div class="panel warm stack">
+      <div class="tag g">что будет дальше</div>
+      <div class="row-item"><span class="marker ghost">1</span><div><h3>Воронка и обоснование</h3><p class="dim" style="margin:4px 0 0">Сектор → отрасль → рынок → сегмент → ниша → микрониша</p></div></div>
+      <div class="row-item"><span class="marker ghost">2</span><div><h3>Игроки и проблемы</h3><p class="dim" style="margin:4px 0 0">3 лидера, 3 выбывших лидера, 7 проблем сегмента</p></div></div>
+      <div class="row-item"><span class="marker ghost">3</span><div><h3>PEST за 5 лет</h3><p class="dim" style="margin:4px 0 0">20 факторов, каждый с источником и оценкой влияния</p></div></div>
+      <div class="row-item"><span class="marker ghost">4</span><div><h3>Выводы</h3><p class="dim" style="margin:4px 0 0">Стоит ли сюда заходить и с каким продуктом</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="slide" data-sect="Как это продаётся" data-min="2">
+  <div class="eyebrow">С чего всё начинается — типовой оффер сегмента</div>
+  <div class="cols c2u grow">
+    <div class="offer">
+      <span class="urgent">Осталось 3 места · набор закрывается сегодня</span>
+      <div class="oh">Наставничество<br>по Wildberries</div>
+      <p class="dim" style="margin:0">Личное сопровождение до первых продаж. Поток на 6 недель.</p>
+      <div class="price">
+        <span class="old">490 000 ₽</span>
+        <span class="new">149 000 ₽<span class="pin">3</span></span>
+      </div>
+      <div class="rassr">или 12 платежей по 15 000 ₽ <span class="pin">2</span></div>
+      <ul class="promises">
+        <li><span class="ck">✓</span><span>Гарантируем выход на 300 000 ₽ в месяц<span class="pin">1</span></span></li>
+        <li><span class="ck">✓</span><span>Результат или вернём деньги</span></li>
+        <li><span class="ck">✓</span><span>Опыт наставника — 4 года на маркетплейсах</span></li>
+      </ul>
+      <p class="src" style="margin:0">Собирательный пример по офферам сегмента. Все элементы — реальные механики продаж.</p>
+    </div>
+    <div class="verdict">
+      <p class="lead">Три элемента этого оффера регулятор выключил за полтора года.</p>
+      <div class="vd"><span class="pin">1</span><div><h3>Гарантия дохода</h3><p class="dim" style="margin:4px 0 0">31.10.2025 — Аязу Шабутдинову 7 лет колонии по ст. 159 УК. По версии следствия — за продажу программ с обещанием гарантированного успеха.</p></div></div>
+      <div class="vd"><span class="pin">2</span><div><h3>Рассрочка</h3><p class="dim" style="margin:4px 0 0">283-ФЗ, в силе с 01.04.2026: покупки свыше 50 000 ₽ уходят в кредитную историю, разная цена за наличные и рассрочку запрещена.</p></div></div>
+      <div class="vd"><span class="pin">3</span><div><h3>Цена без НДС</h3><p class="dim" style="margin:4px 0 0">С 01.01.2026 порог освобождения от НДС на УСН упал с 60 до 20 млн ₽, ставка — 22%. Школа со средним оборотом стала плательщиком НДС.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="slide" data-sect="Воронка" data-min="2.5">
+  <div class="eyebrow">Пункт 2 задания · сужение от сектора к микронише</div>
+  <div class="funnel grow" style="justify-content:center">
+    <div class="fl" style="--w:100%"><span class="lv">СЕКТОР</span><div><div class="vl">EdTech</div><div class="nt">Один из семи секторов инновационной экономики</div></div></div>
+    <div class="fl" style="--w:92%"><span class="lv">ОТРАСЛЬ</span><div><div class="vl">Дополнительное образование взрослых</div><div class="nt">ДПО и неформальное онлайн-обучение — взрослые платят сами</div></div></div>
+    <div class="fl" style="--w:80%"><span class="lv">РЫНОК</span><div><div class="vl">B2C онлайн-обучение взрослых в РФ</div><div class="nt">Ориентир объёма: 154 млрд ₽ — выручка топ-100 EdTech РФ за 2025</div></div></div>
+    <div class="fl pick" style="--w:66%"><span class="lv">СЕГМЕНТ</span><div><div class="vl">Курсы и наставничество от частных экспертов и блогеров</div><div class="nt">Продаётся результат, а не профессия. Юридически — «информационно-консультационные услуги»</div></div></div>
+    <div class="fl" style="--w:52%"><span class="lv">НИША</span><div><div class="vl">Обучение заработку</div><div class="nt">Маркетплейсы, нейросети, трейдинг, личный бренд</div></div></div>
+    <div class="fl" style="--w:40%"><span class="lv">МИКРОНИША</span><div><div class="vl">Запуск на WB / Ozon для новичков</div><div class="nt">Чек 60–250 тыс. ₽, продажа через бесплатный вебинар и Telegram-воронку</div></div></div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="slide" data-sect="Границы рынка" data-min="1.5">
+  <div class="eyebrow">Что мы считаем рынком, а что — нет</div>
+  <h2>Границы</h2>
+  <div class="cols c2 grow">
+    <div class="stack">
+      <div class="panel"><div class="tag g">география</div><p style="margin:9px 0 0">Российская Федерация и русскоязычная аудитория СНГ.</p></div>
+      <div class="panel"><div class="tag g">продукт</div><p style="margin:9px 0 0">Платные онлайн-продукты обучения взрослых, продаваемые напрямую физлицу: курс, интенсив, марафон, наставничество, клуб по подписке.</p></div>
+      <div class="panel"><div class="tag g">чек</div><p style="margin:9px 0 0">От 3 000 до 500 000 ₽. Средний фактический чек по рынку за 2025 — <span class="mono gold">32 191 ₽</span>.</p></div>
+    </div>
+    <div class="stack">
+      <div class="panel bad"><div class="tag r">не входит</div><p style="margin:9px 0 0">Школьное образование, высшее образование, корпоративное B2B-обучение, языковые школы как отдельная вертикаль, бесплатный контент.</p></div>
+      <div class="panel"><div class="tag g">горизонт</div><p style="margin:9px 0 0">2021–2026 годы — пять лет, как требует задание. Этого достаточно: почти все переломные события уложились в последние два года.</p></div>
+      <p class="src">Источник объёма и чека: Smart Ranking, итоги 2025; отраслевой опрос 2 500 респондентов, август 2025.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="slide" data-sect="Сегментация" data-min="2">
+  <div class="eyebrow">Пункт 2 задания · принцип сегментации</div>
+  <h2>Делим по продавцу, а не по теме курса</h2>
+  <p class="lead body-max" style="margin-bottom:1em">Ось: <strong>кто продаёт и что именно гарантирует покупателю.</strong> Она объясняет разницу в юридическом статусе, себестоимости и уязвимости к регулированию. Привычная сегментация по тематике этого не объясняет.</p>
+  <div class="cols c3 grow">
+    <div class="panel stack">
+      <div class="tag">Сегмент 1</div>
+      <h3>Институциональный EdTech</h3>
+      <p class="dim" style="margin:0">Skillbox, Нетология, Яндекс Практикум, «Синергия». Продают профессию и документ. Есть лицензия, договор, налоговый вычет, доступ к корпоративным бюджетам.</p>
+    </div>
+    <div class="panel warm stack" style="border-color:var(--gold)">
+      <div class="tag g">Сегмент 2 · выбран</div>
+      <h3 class="gold">Инфобизнес</h3>
+      <p class="dim" style="margin:0">Курсы и наставничество от частных экспертов и блогеров. Продают доход и трансформацию, лицензии обычно нет. Себестоимость контента близка к нулю — тот самый воздух.</p>
+    </div>
+    <div class="panel stack">
+      <div class="tag">Сегмент 3</div>
+      <h3>Хобби и саморазвитие</h3>
+      <p class="dim" style="margin:0">Рисование, вокал, психология «для себя». Обещания заработка нет — поэтому нет и регуляторного давления. Слабая связь с экономическим циклом.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="slide" data-sect="Почему этот сегмент" data-min="2.5">
+  <div class="eyebrow">Пункт 3 задания · обоснование выбора</div>
+  <h2>Почему мы взяли именно его</h2>
+  <div class="stack grow">
+    <div class="row-item"><span class="marker">1</span><div><h3>Регуляторный шок происходит прямо сейчас</h3><p style="margin:5px 0 0">За 2025–2026 по флагманам сегмента прошли приговоры, введены реестр блогеров, НДС на УСН и закон о рассрочке. Рынок либо обеляется, либо схлопывается — и мы наблюдаем это в реальном времени, а не по учебнику.</p></div></div>
+    <div class="row-item"><span class="marker">2</span><div><h3>Аномальная маржа и аномальная хрупкость</h3><p style="margin:5px 0 0">Ни склада, ни оборудования, ни лицензии. Всё, на чём держится бизнес, — трафик и доверие. Оба ресурса за пять лет подорожали кратно, поэтому PEST здесь показывает не фон, а прямую причину роста и падения выручки.</p></div></div>
+    <div class="row-item"><span class="marker">3</span><div><h3>Это учебниковый «рынок лимонов»</h3><p style="margin:5px 0 0">Покупатель не может оценить качество до оплаты, поэтому недобросовестные вытесняют добросовестных и цена доверия падает для всех. 49% опрошенных прямо говорят, что выбрать качественный курс стало сложнее. Значит, есть незакрытая потребность.</p></div></div>
+    <div class="row-item"><span class="marker">4</span><div><h3>По сегменту есть проверяемые данные</h3><p style="margin:5px 0 0">Квартальные рейтинги Smart Ranking, отраслевые опросы, судебные решения, тексты законов. Каждый фактор в нашем PEST закрыт ссылкой — как требует правило: факт, источник, влияние на сегмент.</p></div></div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="slide" data-sect="Рынок в цифрах" data-min="1.5">
+  <div class="eyebrow">Контекст · итоги 2025 года</div>
+  <h2>Рынок ещё растёт. Наш сегмент — уже нет</h2>
+  <div class="figs grow" style="align-content:center">
+    <div class="fig"><div class="n">154<span style="font-size:.45em"> млрд ₽</span></div><div class="c">Выручка топ-100 EdTech-компаний РФ за 2025 год</div></div>
+    <div class="fig"><div class="n">+12%</div><div class="c">Рост рынка за 2025. Годом раньше было +19%, в 2023 — +32%</div></div>
+    <div class="fig"><div class="n bad">−12%</div><div class="c">Бизнес-образование — самый падающий сегмент EdTech по итогам 2025</div></div>
+    <div class="fig"><div class="n bad">64</div><div class="c">Компании из рейтинга показали рост. Год назад таких было 84, в 2023 — 95</div></div>
+  </div>
+  <div class="panel bad" style="margin-top:auto">
+    <p style="margin:0"><strong>Главный сигнал:</strong> впервые за историю наблюдений зафиксировано падение годовой выручки GetCourse — платформы, на которой живёт основная масса частных онлайн-школ. Это опережающий индикатор для всего сегмента.</p>
+    <p class="src" style="margin:8px 0 0">Smart Ranking, итоги 2025 года</p>
+  </div>
+</section>
+
+<!-- 9 -->
+<section class="slide" data-sect="Ведущие игроки" data-min="2.5">
+  <div class="eyebrow">Пункт 4 задания · три ведущих игрока</div>
+  <h2>Долю держат не те, кто продаёт курсы</h2>
+  <p class="lead body-max" style="margin-bottom:.9em">«Чистый» инфобиз фрагментирован: тысячи ИП и самозанятых, ни у кого нет доминирующей доли, публичной отчётности почти нет. Поэтому лидеров корректно искать по двум осям — кто собирает деньги покупателей и кто контролирует инфраструктуру продаж.</p>
+  <div class="cols c3 grow">
+    <div class="panel warm stack"><div class="tag g">№ 1 рейтинга Smart Ranking 2025</div><h3>Университет «Синергия»</h3><p class="dim" style="margin:0">Гибрид двух сегментов: лицензия вуза и государственный диплом на входе — инфобиз-механики продаж на выходе. Рост в 2025 дало высшее образование, а не курсы.</p><p style="margin:0"><strong>Для нас:</strong> эталон легализации. Выжившая версия «продажи мечты» — это мечта, упакованная в лицензию.</p></div>
+    <div class="panel warm stack"><div class="tag g">инфраструктурный монополист</div><h3>GetCourse</h3><p class="dim" style="margin:0">Не продаёт курсы — продаёт лопаты золотоискателям: LMS, воронки, приём платежей, рассрочку. Зарабатывает с оборота чужих школ.</p><p style="margin:0"><strong>Для нас:</strong> самый честный индикатор здоровья сегмента и одновременно единая точка отказа для любой школы.</p></div>
+    <div class="panel stack"><div class="tag">соседний сегмент</div><h3>Skillbox Holding</h3><p class="dim" style="margin:0">Лицензия, договор, налоговый вычет, документ об окончании, карьерный центр. ДПО выросло в 2025 на 6% — медленно, но в плюс.</p><p style="margin:0"><strong>Для нас:</strong> планка, ниже которой продукт уже не воспринимается всерьёз. Туда перетекает спрос.</p></div>
+  </div>
+</section>
+
+<!-- 10 -->
+<section class="slide" data-sect="Выбывшие лидеры" data-min="2">
+  <div class="eyebrow">Кто занимал эту долю до 2025 года</div>
+  <h2 style="color:var(--red)">Доля не досталась конкурентам.<br>Она исчезла вместе со спросом</h2>
+  <div class="cols c3 grow">
+    <div class="panel bad voided stack"><h3>Аяз Шабутдинов</h3><div class="tag r">Like Центр · бизнес-обучение</div><p class="dim" style="margin:0">31.10.2025 — 7 лет колонии и штраф 5 млн ₽ за мошенничество в особо крупном размере.</p><p style="margin:0"><strong>Прецедент:</strong> обещание гарантированного результата в оффере может квалифицироваться по ст. 159 УК. После приговора лендинги переписывал весь рынок.</p></div>
+    <div class="panel bad voided stack"><h3>Елена Блиновская</h3><div class="tag r">«Марафон желаний» · личностный рост</div><p class="dim" style="margin:0">Уклонение от налогов свыше 900 млн ₽. Приговор 03.03.2025 — 5 лет, смягчён до 4,5; кассация оставила в силе 29.07.2026.</p><p style="margin:0"><strong>Прецедент:</strong> дробление на ИП родственников больше не работает — ФНС научилась раскрывать структуру выручки и делает это публично.</p></div>
+    <div class="panel bad voided stack"><h3>Валерия и Артём Чекалины</h3><div class="tag r">марафоны · обучение блогингу</div><p class="dim" style="margin:0">31.07.2026 — Валерии 5 лет условно и штраф 765 млн ₽ за валютные операции по подложным документам; Артёму — 7 лет колонии.</p><p style="margin:0"><strong>Прецедент:</strong> под удар попадает вся финансовая обвязка инфобиза, а не только сам продукт.</p></div>
+  </div>
+</section>
+
+<!-- 11 -->
+<section class="slide" data-sect="Проблемы 1–4" data-min="2.5">
+  <div class="eyebrow">Пункт 5 задания · голос народа</div>
+  <h2>Что не так с продуктом</h2>
+  <div class="stack grow">
+    <div class="row-item"><span class="marker x">1</span><div><h3>Продукт — бесплатная информация в дорогой упаковке</h3><p style="margin:4px 0 0">Ядро курса собирается из общедоступных материалов, а генеративный ИИ доводит это до предела: аналогичный конспект делается за десять минут бесплатно.</p><p class="qt" style="margin:7px 0 0">«Всё то же самое есть на YouTube бесплатно», «полкурса — вода и мотивация»</p></div></div>
+    <div class="row-item"><span class="marker x">2</span><div><h3>Обещание результата, за которое никто не отвечает</h3><p style="margin:4px 0 0">В рекламе гарантия дохода, в оферте — информационно-консультационная услуга без обязательств. Этот разрыв и есть юридическое ядро дел о мошенничестве.</p><p class="qt" style="margin:7px 0 0">«Обещали доход к концу курса — в итоге получил PDF и чат»</p></div></div>
+    <div class="row-item"><span class="marker x">3</span><div><h3>Невозможность вернуть деньги</h3><p style="margin:4px 0 0">Типовая оферта считает услугу оказанной в момент открытия доступа. Формально это спорно, но в суд идут единицы.</p><p class="qt" style="margin:7px 0 0">«Написал на возврат на второй день — ответили, что доступ открыт, значит услуга оказана»</p></div></div>
+    <div class="row-item"><span class="marker x">4</span><div><h3>Рассрочка превращает эмоцию в кредит на два года</h3><p style="margin:4px 0 0">Покупка совершается на пике вебинара: «12 × 15 000 ₽» воспринимается как маленькая сумма, а не как обязательство на 180 000 ₽.</p><p class="qt" style="margin:7px 0 0">«Купил на эмоциях, через неделю остыл — курс не нужен, а платить ещё год»</p></div></div>
+  </div>
+</section>
+
+<!-- 12 -->
+<section class="slide" data-sect="Проблемы 5–7" data-min="2">
+  <div class="eyebrow">Пункт 5 задания · продолжение</div>
+  <h2>Что не так с экономикой</h2>
+  <div class="stack grow">
+    <div class="row-item"><span class="marker x">5</span><div><h3>Околонулевая доходимость и отсутствие повторных продаж</h3><p style="margin:4px 0 0">13% бросают обучение, до конца доходит меньшинство. Нет проверки заданий, нет когорт, нет сопровождения — значит, нулевой LTV. Вся экономика держится на первой продаже и постоянной закупке нового трафика.</p></div></div>
+    <div class="row-item"><span class="marker x">6</span><div><h3>Репутационная токсичность: налог на недоверие</h3><p style="margin:4px 0 0">Приговоры лидерам сегмента освещали федеральные СМИ. Теперь любой новый продавец считается мошенником, пока не доказал обратное — и добросовестный игрок платит эту цену наравне со всеми.</p><p class="qt" style="margin:7px 0 0">«Сначала покажи диплом, потом поговорим», «где отзывы реальных людей, а не купленные»</p></div></div>
+    <div class="row-item"><span class="marker x">7</span><div><h3>Отсутствие лицензии отсекает от взрослых денег</h3><p style="margin:4px 0 0">Без лицензии покупатель не получает налоговый вычет и документ, а продавец — доступ к корпоративным бюджетам и госпрограммам. При этом 45% покупателей смотрят на наличие документа, а 38% — на квалификацию преподавателя.</p></div></div>
+  </div>
+</section>
+
+<!-- 13 -->
+<section class="slide" data-sect="Общий знаменатель" data-min="1">
+  <div class="eyebrow">Что объединяет все семь проблем</div>
+  <div class="grow" style="display:flex;flex-direction:column;justify-content:center;gap:clamp(14px,2.4vh,28px)">
+    <h1 style="font-size:clamp(24px,3.9vw,54px)">Покупатель не может проверить результат до оплаты,<br>а продавец не отвечает за него после</h1>
+    <div class="rule"></div>
+    <p class="lead">Значит, незакрытая потребность сегмента — не «ещё один курс», а <strong class="gold">верифицируемость</strong>: договор с измеримым результатом, понятные условия возврата, лицензия и документ, публичная статистика доходимости, оплата по этапам вместо кредита на два года.</p>
+    <p class="lead dim">И это при том, что 58% взрослых всё ещё планируют учиться онлайн в ближайший год.</p>
+  </div>
+</section>
+
+<!-- 14 -->
+<section class="slide" data-sect="PEST · методика" data-min="1">
+  <div class="eyebrow">Пункт 6 задания · как мы считали</div>
+  <h2>Методика</h2>
+  <div class="cols c2 grow">
+    <div class="stack">
+      <div class="panel"><h3>Один фактор = факт + источник + влияние</h3><p class="dim" style="margin:7px 0 0">Правило со слайда 10 презентации. У каждого из 20 факторов есть дата, номер закона или судебного решения и ссылка на публикацию.</p></div>
+      <div class="panel"><h3>Пять независимых оценок</h3><p class="dim" style="margin:7px 0 0">Каждый член команды выставлял влияние на сегмент по шкале от −5 до +5, не сверяясь с остальными. В таблице видны все пять.</p></div>
+      <div class="panel"><h3>Веса внутри блока дают в сумме 1</h3><p class="dim" style="margin:7px 0 0">Взвешенное влияние = вес фактора × средняя оценка экспертов. Поэтому итог блока тоже укладывается в шкалу −5…+5 и блоки сравнимы между собой.</p></div>
+    </div>
+    <div class="panel warm stack" style="justify-content:center">
+      <div class="tag g">как читать шкалу</div>
+      <div class="stack" style="gap:9px">
+        <p style="margin:0"><span class="mono" style="color:var(--red)">−5…−3</span> &nbsp; фактор разрушает бизнес-модель</p>
+        <p style="margin:0"><span class="mono" style="color:var(--red)">−3…−1</span> &nbsp; заметно мешает</p>
+        <p style="margin:0"><span class="mono dim">около 0</span> &nbsp; нейтрален</p>
+        <p style="margin:0"><span class="mono" style="color:var(--green)">+1…+3</span> &nbsp; помогает</p>
+        <p style="margin:0"><span class="mono" style="color:var(--green)">+3…+5</span> &nbsp; создаёт новое окно возможностей</p>
+      </div>
+      <p class="src" style="margin:6px 0 0">На следующих слайдах бар показывает среднюю оценку пяти экспертов, число справа — её же значение, а вес указан под названием фактора.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 15 -->
+<section class="slide" data-sect="P · Политические" data-min="2.5">
+  <div class="eyebrow">Блок P · итог блока <span class="mono" style="color:var(--red)">−3,44</span></div>
+  <h2>Политика и регулирование</h2>
+  <div class="bars grow" style="justify-content:center">
+    <div class="scale"><span></span><span class="ticks"><span>−5</span><span>0</span><span>+5</span></span><span></span></div>
+    <div class="bar-row"><div class="lb">Уголовная практика за обещание результата<small>вес 0,30 · приговор Шабутдинову, 31.10.2025</small></div><div class="track"><div class="fill neg" style="width:46%"></div></div><div class="val n">−4,6</div></div>
+    <div class="bar-row"><div class="lb">Налоговое давление ФНС на инфобизнес<small>вес 0,25 · дела Блиновской и Чекалиных</small></div><div class="track"><div class="fill neg" style="width:42%"></div></div><div class="val n">−4,2</div></div>
+    <div class="bar-row"><div class="lb">НДС на УСН: порог с 60 до 20 млн ₽<small>вес 0,20 · с 01.01.2026, ставка 22%</small></div><div class="track"><div class="fill neg" style="width:40%"></div></div><div class="val n">−4,0</div></div>
+    <div class="bar-row"><div class="lb">Реестр блогеров РКН и маркировка рекламы<small>вес 0,15 · штрафы с 01.09.2025 до 500 тыс. ₽</small></div><div class="track"><div class="fill neg" style="width:30%"></div></div><div class="val n">−3,0</div></div>
+    <div class="bar-row"><div class="lb">Легализация как госвектор: лицензии и вычет<small>вес 0,10 · доступ к корпоративным бюджетам</small></div><div class="track"><div class="fill pos" style="width:24%"></div></div><div class="val p">+2,4</div></div>
+  </div>
+  <p class="src" style="margin-top:auto">Главное: продающий оффер стал юридическим риском, а модель «ИП на УСН плюс родственники» — раскрываемой схемой. Единственный плюс блока даёт лицензирование.</p>
+</section>
+
+<!-- 16 -->
+<section class="slide" data-sect="E · Экономические" data-min="2.5">
+  <div class="eyebrow">Блок E · итог блока <span class="mono" style="color:var(--red)">−3,49</span> — худший из четырёх</div>
+  <h2>Экономика</h2>
+  <div class="bars grow" style="justify-content:center">
+    <div class="scale"><span></span><span class="ticks"><span>−5</span><span>0</span><span>+5</span></span><span></span></div>
+    <div class="bar-row"><div class="lb">Дорогие деньги: ключевая ставка 14%<small>вес 0,30 · против 4,25% в 2020, пик 21% в 2024–2025</small></div><div class="track"><div class="fill neg" style="width:46%"></div></div><div class="val n">−4,6</div></div>
+    <div class="bar-row"><div class="lb">283-ФЗ о рассрочке под надзором ЦБ<small>вес 0,25 · с 01.04.2026, покупки от 50 тыс. ₽ в БКИ</small></div><div class="track"><div class="fill neg" style="width:46%"></div></div><div class="val n">−4,6</div></div>
+    <div class="bar-row"><div class="lb">Сжатие рынка: бизнес-образование −12%<small>вес 0,20 · первое падение выручки GetCourse</small></div><div class="track"><div class="fill neg" style="width:36%"></div></div><div class="val n">−3,6</div></div>
+    <div class="bar-row"><div class="lb">Рост стоимости трафика<small>вес 0,15 · перегретые аукционы после ухода Meta*</small></div><div class="track"><div class="fill neg" style="width:36%"></div></div><div class="val n">−3,6</div></div>
+    <div class="bar-row"><div class="lb">Платёжеспособный спрос сохраняется<small>вес 0,10 · бюджет вырос с 32 191 ₽ до 52 000 ₽</small></div><div class="track"><div class="fill pos" style="width:30%"></div></div><div class="val p">+3,0</div></div>
+  </div>
+  <p class="src" style="margin-top:auto">Главное: удар пришёлся не по продукту, а по способу оплаты — без рассрочки дорогой курс физически не продаётся. * Meta признана экстремистской и запрещена в РФ.</p>
+</section>
+
+<!-- 17 -->
+<section class="slide" data-sect="S · Социальные" data-min="2">
+  <div class="eyebrow">Блок S · итог блока <span class="mono" style="color:var(--red)">−2,71</span></div>
+  <h2>Люди и поведение</h2>
+  <div class="bars grow" style="justify-content:center">
+    <div class="scale"><span></span><span class="ticks"><span>−5</span><span>0</span><span>+5</span></span><span></span></div>
+    <div class="bar-row"><div class="lb">Обвал репутации: «инфоцыган» как ярлык<small>вес 0,30 · приговоры на федеральных каналах</small></div><div class="track"><div class="fill neg" style="width:48%"></div></div><div class="val n">−4,8</div></div>
+    <div class="bar-row"><div class="lb">Перенасыщение: покупатель не может выбрать<small>вес 0,25 · 49% говорят, что выбирать стало сложнее</small></div><div class="track"><div class="fill neg" style="width:38%"></div></div><div class="val n">−3,8</div></div>
+    <div class="bar-row"><div class="lb">Запрос сместился к подтверждаемому результату<small>вес 0,20 · 45% смотрят на документ, 38% — на преподавателя</small></div><div class="track"><div class="fill neg" style="width:30%"></div></div><div class="val n">−3,0</div></div>
+    <div class="bar-row"><div class="lb">Онлайн-обучение нормализовалось как формат<small>вес 0,15 · 98% знают, 64% имеют личный опыт</small></div><div class="track"><div class="fill pos" style="width:36%"></div></div><div class="val p">+3,6</div></div>
+    <div class="bar-row"><div class="lb">Аудитория мигрирует между площадками<small>вес 0,10 · просмотры на YouTube упали на 12–78%</small></div><div class="track"><div class="fill neg" style="width:26%"></div></div><div class="val n">−2,6</div></div>
+  </div>
+  <p class="src" style="margin-top:auto">Главное: сам формат обучения вырос и охватил старшие возрастные группы. Отток идёт не из онлайна — а конкретно от недобросовестных продавцов.</p>
+</section>
+
+<!-- 18 -->
+<section class="slide" data-sect="T · Технологические" data-min="2">
+  <div class="eyebrow">Блок T · итог блока <span class="mono" style="color:var(--red)">−1,86</span> — самый мягкий</div>
+  <h2>Технологии: не приговор, а развилка</h2>
+  <div class="bars grow" style="justify-content:center">
+    <div class="scale"><span></span><span class="ticks"><span>−5</span><span>0</span><span>+5</span></span><span></span></div>
+    <div class="bar-row"><div class="lb">Генеративный ИИ обесценивает информационный продукт<small>вес 0,30 · курс-конспект собирается бесплатно за 10 минут</small></div><div class="track"><div class="fill neg" style="width:46%"></div></div><div class="val n">−4,6</div></div>
+    <div class="bar-row"><div class="lb">Тот же ИИ обнуляет барьер входа для конкурентов<small>вес 0,25 · скорость копирования продукта — дни</small></div><div class="track"><div class="fill neg" style="width:36%"></div></div><div class="val n">−3,6</div></div>
+    <div class="bar-row"><div class="lb">Зависимость от одной платформы<small>вес 0,20 · тарифы GetCourse задают экономику школы</small></div><div class="track"><div class="fill neg" style="width:28%"></div></div><div class="val n">−2,8</div></div>
+    <div class="bar-row"><div class="lb">Зрелость и дешевизна инструментов запуска<small>вес 0,15 · гипотеза проверяется за неделю и 50 тыс. ₽</small></div><div class="track"><div class="fill pos" style="width:36%"></div></div><div class="val p">+3,6</div></div>
+    <div class="bar-row"><div class="lb">Обучение работе с ИИ — растущая ниша<small>вес 0,10 · машинное обучение +60% за 2025</small></div><div class="track"><div class="fill pos" style="width:44%"></div></div><div class="val p">+4,4</div></div>
+  </div>
+  <p class="src" style="margin-top:auto">Главное: ИИ бьёт сверху и снизу одновременно — но он же даёт единственное направление с двузначным ростом на падающем рынке.</p>
+</section>
+
+<!-- 19 -->
+<section class="slide" data-sect="Итоговая карта" data-min="2">
+  <div class="eyebrow">Пункт 6 задания · интегральная оценка</div>
+  <h2>Карта влияния внешней среды</h2>
+  <div class="bars grow" style="justify-content:center">
+    <div class="scale"><span></span><span class="ticks"><span>−5</span><span>−3</span><span>0</span><span>+3</span><span>+5</span></span><span></span></div>
+    <div class="bar-row big"><div class="lb">P · Политика</div><div class="track"><div class="fill neg" style="width:34.4%"></div></div><div class="val n">−3,44</div></div>
+    <div class="bar-row big"><div class="lb">E · Экономика</div><div class="track"><div class="fill neg" style="width:34.9%"></div></div><div class="val n">−3,49</div></div>
+    <div class="bar-row big"><div class="lb">S · Социум</div><div class="track"><div class="fill neg" style="width:27.1%"></div></div><div class="val n">−2,71</div></div>
+    <div class="bar-row big"><div class="lb">T · Технологии</div><div class="track"><div class="fill neg" style="width:18.6%"></div></div><div class="val n">−1,86</div></div>
+    <div class="bar-row big total"><div class="lb gold">Интегральная оценка</div><div class="track"><div class="fill neg" style="width:28.8%"></div></div><div class="val n">−2,88</div></div>
+  </div>
+  <div class="panel warm" style="margin-top:auto">
+    <p style="margin:0"><strong>Как это трактовать.</strong> Значение около −3 при шкале ±5 означает не «плохой рынок», а рынок в фазе принудительного переустройства: старая модель монетизации демонтирована регулятором и экономикой, а новая — лицензия, проверяемый результат, ИИ-тематика — ещё никем не занята.</p>
+  </div>
+</section>
+
+<!-- 20 -->
+<section class="slide" data-sect="Выводы · плюсы" data-min="1.5">
+  <div class="eyebrow">Часть 3 · что делает сегмент привлекательнее</div>
+  <h2 style="color:var(--green)">Три причины сюда смотреть</h2>
+  <div class="cols c3 grow">
+    <div class="panel good stack"><h3>Спрос не исчез, бюджет растёт</h3><p class="dim" style="margin:0">58% взрослых планируют учиться онлайн в ближайшие 12 месяцев. Планируемый бюджет на 2026 — <span class="mono">52 000 ₽</span> против <span class="mono">32 191 ₽</span> фактических за 2025.</p><p style="margin:0"><strong>Падает не готовность платить за обучение, а готовность платить за воздух.</strong></p></div>
+    <div class="panel good stack"><h3>Ниша ИИ-обучения растёт на падающем рынке</h3><p class="dim" style="margin:0">Курсы по машинному обучению — <span class="mono">+60%</span> за 2025, анализ данных — <span class="mono">+5%</span>, при стагнации классического ИТ и падении бизнес-образования на 12%.</p><p style="margin:0"><strong>Единственное направление с двузначным ростом — готовое окно входа.</strong></p></div>
+    <div class="panel good stack"><h3>Обвал доверия расчищает нишу</h3><p class="dim" style="margin:0">49% не могут выбрать качественный курс, 45% хотят документ. Три крупнейших игрока выбыли по приговорам, их доля не досталась никому.</p><p style="margin:0"><strong>Кто первым сделает результат проверяемым — забирает переток спроса.</strong></p></div>
+  </div>
+</section>
+
+<!-- 21 -->
+<section class="slide" data-sect="Выводы · минусы" data-min="1.5">
+  <div class="eyebrow">Часть 3 · что усложняет развитие</div>
+  <h2 style="color:var(--red)">Три причины не заходить сюда со старым продуктом</h2>
+  <div class="cols c3 grow">
+    <div class="panel bad stack"><h3>Регуляторный каскад выключил три опоры сразу</h3><p class="dim" style="margin:0">Оффер — приговор по ст. 159 УК. Налоги — НДС на УСН с 20 млн ₽. Оплата — 283-ФЗ с 01.04.2026.</p><p style="margin:0"><strong>Каждый пункт по отдельности переживаем. Все три одновременно — нет.</strong></p></div>
+    <div class="panel bad stack"><h3>Экономика привлечения больше не сходится</h3><p class="dim" style="margin:0">Ставка 14% сделала рассрочку дорогой, а через неё шло от 60% до 80% продаж дорогих курсов. Аукционы рекламы перегреты, размещение у блогеров подорожало.</p><p style="margin:0"><strong>Результат виден в цифрах: −12% и первое падение GetCourse.</strong></p></div>
+    <div class="panel bad stack"><h3>Генеративный ИИ бьёт с двух сторон</h3><p class="dim" style="margin:0">Сверху обесценивает продукт — базовый курс собирается бесплатно. Снизу обнуляет барьер входа — конкурентов больше при падающем спросе.</p><p style="margin:0"><strong>Защититься можно только тем, что ИИ не воспроизводит: практикой, обратной связью, репутацией.</strong></p></div>
+  </div>
+</section>
+
+<!-- 22 -->
+<section class="slide" data-sect="Чего не хватает" data-min="1">
+  <div class="eyebrow">Часть 3 · пробелы в данных</div>
+  <h2>Чего мы не знаем — и как это узнать</h2>
+  <div class="stack grow" style="justify-content:center">
+    <div class="row-item"><span class="marker ghost">?</span><div><h3>Реальный размер именно нашего сегмента</h3><p style="margin:4px 0 0">Smart Ranking считает топ-100 юрлиц, а серый инфобиз состоит из тысяч ИП и самозанятых. Мы знаем объём рынка целиком, но не долю сегмента. <strong>Как узнать:</strong> оценить через оборот GetCourse и Prodamus, данные эквайринга и статистику ФНС по ОКВЭД 85.41 и 85.42.</p></div></div>
+    <div class="row-item"><span class="marker ghost">?</span><div><h3>Фактическая доходимость и доля возвратов</h3><p style="margin:4px 0 0">Публичных цифр нет — компании их не раскрывают, потому что они плохие. <strong>Как узнать:</strong> собственный опрос 100–150 покупателей и разбор судебной практики по возвратам за 2025–2026 годы.</p></div></div>
+    <div class="row-item"><span class="marker ghost">?</span><div><h3>Эластичность спроса по цене после НДС и закона о рассрочке</h3><p style="margin:4px 0 0">Ключевая неизвестная: сколько покупателей отвалится при переходе от «12 × 15 000 ₽» к честной цене 150 000 ₽ одним платежом, попадающим в кредитную историю. <strong>Как узнать:</strong> ценовой A/B-тест на реальном трафике либо сравнение выручки школ до и после 01.04.2026.</p></div></div>
+  </div>
+</section>
+
+<!-- 23 -->
+<section class="slide" data-sect="Главный вывод" data-min="1.5">
+  <div class="eyebrow">Итог</div>
+  <div class="grow" style="display:flex;flex-direction:column;justify-content:center;gap:clamp(13px,2.2vh,26px)">
+    <h1 style="font-size:clamp(26px,4.4vw,62px)">Воздух больше не продаётся.<br>Обучение — продаётся</h1>
+    <div class="rule"></div>
+    <div class="cols c2">
+      <p class="lead">За 2025–2026 регулятор выключил три несущие опоры бизнес-модели одновременно, и сегмент вошёл в фазу управляемого сжатия: <span class="mono" style="color:var(--red)">−2,88</span> из ±5 по PEST, бизнес-образование <span class="mono" style="color:var(--red)">−12%</span> за 2025.</p>
+      <p class="lead">При этом спрос не упал — он перетекает к продуктам с проверяемым результатом. Вход в сегмент сегодня имеет смысл только с лицензией, публичной методикой и ИИ-тематикой. То есть ровно с тем, чего у классического инфобиза нет.</p>
+    </div>
+    <div class="panel warm"><p style="margin:0"><strong class="gold">Наша рекомендация:</strong> заходить не в «обучение заработку», а в обучение применению ИИ в конкретной профессии — с лицензией, оплатой по этапам и публичной статистикой выпускников. Это единственная точка, где растущий спрос встречается с расчищенной нишей.</p></div>
+  </div>
+</section>
+
+<!-- 24 -->
+<section class="slide" data-sect="Спасибо" data-min="1">
+  <div class="grow" style="display:flex;flex-direction:column;justify-content:center;gap:clamp(14px,2.4vh,30px)">
+    <div class="kicker">Практика 1 · ФИТИП · 2026</div>
+    <h1 style="font-size:clamp(32px,5.6vw,84px)">Спасибо.<br>Вопросы?</h1>
+    <div class="rule"></div>
+    <div class="cols c2">
+      <div class="panel stack"><div class="tag g">источники</div><p class="dim" style="margin:0">25 ссылок на листе «Источники» в рабочей таблице: Smart Ranking, РБК Тренды, РИА Новости, Первый канал, Контур, eLama, Фонтанка, SberCIB. Каждый факт в PEST закрыт публикацией.</p></div>
+      <div class="panel stack"><div class="tag g">промты</div><p class="dim" style="margin:0">Все 8 промтов и то, что пришлось править руками, — на листе «Промты». Примерно треть выданных ИИ фактов оказалась неточной по датам и цифрам, каждый перепроверяли по первоисточнику.</p></div>
+    </div>
+    <p class="src">Данные актуальны на 10 сентября 2026 года.</p>
+  </div>
+</section>
+
+</div>
+
+<div class="nav">
+  <span class="mins" id="navMins">1 мин</span>
+  <span class="spacer"></span>
+  <span class="hint">Стрелки, пробел или клик по краям экрана</span>
+  <button type="button" id="btnPrev" aria-label="Предыдущий слайд">‹ Назад</button>
+  <button type="button" id="btnNext" aria-label="Следующий слайд">Далее ›</button>
+</div>
+
+<!-- overview -->
+<div class="ov hidden" id="ovOverview">
+  <button class="close" id="closeO">Esc — закрыть</button>
+  <h2>Обзор слайдов</h2>
+  <p class="dim" style="margin:0">Кликните, чтобы перейти.</p>
+  <div class="thumbs" id="thumbs"></div>
+</div>
+
+<!-- plan -->
+<div class="ov hidden" id="ovPlan">
+  <button class="close" id="closeP">Esc — закрыть</button>
+  <h2>План выступления</h2>
+  <p class="dim" style="margin:0 0 4px">Доклад рассчитан на <span class="mono gold" id="planTotal">—</span>, остаток от 45 минут — на вопросы. Нажмите <b class="gold">T</b>, чтобы запустить обратный отсчёт.</p>
+  <table class="plan">
+    <thead><tr><th>№</th><th>Слайд</th><th>Мин</th><th>Ведёт</th></tr></thead>
+    <tbody id="planBody"></tbody>
+  </table>
+  <p class="src" style="margin-top:14px">Роли распределены по смысловым блокам. Если состав команды меньше пяти — объединяйте соседние блоки, а не дробите их.</p>
+</div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var n = slides.length, i = 0;
+  var elCur = document.getElementById('cur'), elTot = document.getElementById('tot');
+  var elSect = document.getElementById('sect'), elProg = document.getElementById('prog');
+  var ovO = document.getElementById('ovOverview'), ovP = document.getElementById('ovPlan');
+  elTot.textContent = n;
+
+  var owners = [
+    [1,3,'Эксперт 1'], [4,7,'Эксперт 2'], [8,10,'Эксперт 3'],
+    [11,15,'Эксперт 4'], [16,22,'Эксперт 5'], [23,24,'Эксперт 1']
+  ];
+  function ownerOf(idx1){
+    for (var k=0;k<owners.length;k++){ if (idx1>=owners[k][0] && idx1<=owners[k][1]) return owners[k][2]; }
+    return '—';
+  }
+  function mins(s){ return parseFloat(s.dataset.min || '1'); }
+  function fmtMin(v){ return String(v).replace('.', ',') + ' мин'; }
+
+  function show(k){
+    i = Math.max(0, Math.min(n-1, k));
+    slides.forEach(function(s,j){ s.classList.toggle('on', j===i); });
+    var s = slides[i];
+    elCur.textContent = i+1;
+    elSect.textContent = s.dataset.sect || '';
+    elProg.style.width = ((i+1)/n*100).toFixed(2) + '%';
+    var cur = document.querySelector('.th.cur'); if (cur) cur.classList.remove('cur');
+    var t = document.getElementById('th'+i); if (t) t.classList.add('cur');
+    document.getElementById('navMins').textContent = fmtMin(mins(s));
+    document.getElementById('btnPrev').disabled = (i === 0);
+    document.getElementById('btnNext').disabled = (i === n-1);
+    s.scrollTop = 0;
+  }
+  function next(){ show(i+1); } function prev(){ show(i-1); }
+
+  // overview thumbs
+  var thumbs = document.getElementById('thumbs');
+  slides.forEach(function(s,j){
+    var b = document.createElement('button');
+    b.className = 'th'; b.id = 'th'+j; b.type = 'button';
+    b.innerHTML = '<span class="i">'+String(j+1).padStart(2,'0')+' · '+fmtMin(mins(s))+'</span><span class="t"></span>';
+    b.querySelector('.t').textContent = s.dataset.sect || '';
+    b.addEventListener('click', function(){ closeAll(); show(j); });
+    thumbs.appendChild(b);
+  });
+
+  // plan table
+  var body = document.getElementById('planBody'), total = 0;
+  slides.forEach(function(s,j){
+    total += mins(s);
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td class="mono dim">'+String(j+1).padStart(2,'0')+'</td><td></td><td class="m">'+fmtMin(mins(s))+'</td><td class="who">'+ownerOf(j+1)+'</td>';
+    tr.children[1].textContent = s.dataset.sect || '';
+    body.appendChild(tr);
+  });
+  document.getElementById('planTotal').textContent = fmtMin(Math.round(total*10)/10);
+
+  // timer
+  var LIMIT = 45*60, left = LIMIT, running = false, tick = null;
+  var clock = document.getElementById('clock');
+  function paint(){
+    var neg = left < 0, a = Math.abs(left);
+    var m = Math.floor(a/60), s = a%60;
+    clock.textContent = (neg?'+':'') + m + ':' + String(s).padStart(2,'0');
+    clock.classList.toggle('over', neg);
+    clock.classList.toggle('idle', !running && left===LIMIT);
+  }
+  function toggleTimer(){
+    if (running){ clearInterval(tick); running = false; }
+    else { running = true; tick = setInterval(function(){ left--; paint(); }, 1000); }
+    paint();
+  }
+  function resetTimer(){ clearInterval(tick); running = false; left = LIMIT; paint(); }
+  paint();
+
+  var btnO = document.getElementById('btnO'), btnP = document.getElementById('btnP'), btnT = document.getElementById('btnT');
+  function syncBtns(){
+    btnO.classList.toggle('act', !ovO.classList.contains('hidden'));
+    btnP.classList.toggle('act', !ovP.classList.contains('hidden'));
+    btnT.classList.toggle('act', running);
+  }
+  function closeAll(){ ovO.classList.add('hidden'); ovP.classList.add('hidden'); syncBtns(); }
+  function toggle(el){ var open = !el.classList.contains('hidden'); closeAll(); if (!open) el.classList.remove('hidden'); syncBtns(); }
+
+  document.getElementById('closeO').addEventListener('click', closeAll);
+  document.getElementById('closeP').addEventListener('click', closeAll);
+  document.getElementById('zl').addEventListener('click', prev);
+  document.getElementById('zr').addEventListener('click', next);
+  document.getElementById('btnPrev').addEventListener('click', prev);
+  document.getElementById('btnNext').addEventListener('click', next);
+  btnO.addEventListener('click', function(){ toggle(ovO); });
+  btnP.addEventListener('click', function(){ toggle(ovP); });
+  btnT.addEventListener('click', function(){ toggleTimer(); syncBtns(); });
+  clock.addEventListener('click', function(){ toggleTimer(); syncBtns(); });
+  clock.addEventListener('dblclick', function(){ resetTimer(); syncBtns(); });
+
+  document.addEventListener('keydown', function(e){
+    var k = e.key;
+    if (k === 'Escape'){ closeAll(); return; }
+    if (k === 'ArrowRight' || k === 'PageDown' || k === ' '){ e.preventDefault(); closeAll(); next(); }
+    else if (k === 'ArrowLeft' || k === 'PageUp'){ e.preventDefault(); closeAll(); prev(); }
+    else if (k === 'Home'){ closeAll(); show(0); }
+    else if (k === 'End'){ closeAll(); show(n-1); }
+    else if (k === 'o' || k === 'O' || k === 'щ' || k === 'Щ'){ toggle(ovO); }
+    else if (k === 'p' || k === 'P' || k === 'з' || k === 'З'){ toggle(ovP); }
+    else if (k === 't' || k === 'T' || k === 'е' || k === 'Е'){ toggleTimer(); syncBtns(); }
+    else if (k === 'r' || k === 'R' || k === 'к' || k === 'К'){ resetTimer(); syncBtns(); }
+  });
+
+  // Артефакт живёт в iframe: без фокуса keydown не долетает. Забираем его сразу и при любом клике.
+  try { window.focus(); } catch(e){}
+  document.addEventListener('mousedown', function(){ try { window.focus(); } catch(e){} });
+
+  var x0 = null;
+  document.addEventListener('touchstart', function(e){ x0 = e.touches[0].clientX; }, {passive:true});
+  document.addEventListener('touchend', function(e){
+    if (x0 === null) return;
+    var dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 55){ dx < 0 ? next() : prev(); }
+    x0 = null;
+  }, {passive:true});
+
+  syncBtns();
+  show(0);
+})();
+</script>
