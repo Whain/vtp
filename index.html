@@ -163,6 +163,9 @@ strong{color:var(--bone);font-weight:600}
 .tag.g{color:var(--gold);border-color:#4A3A19}
 .tag.r{color:var(--red);border-color:#4E2A26}
 .src{font-family:var(--mono);font-size:clamp(9.5px,.76vw,11.5px);color:#6E757E;letter-spacing:.02em}
+/* z-index выше .zone: иначе левая зона листания перехватывает клик по ссылке */
+.sheet{position:relative;z-index:25;align-self:flex-start;display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);font-size:clamp(11px,.9vw,13.5px);letter-spacing:.04em;color:var(--gold);border:1px solid #4A3A19;border-radius:2px;padding:9px 14px;text-decoration:none;transition:color .15s,border-color .15s}
+.sheet:hover{color:var(--gold-hi);border-color:var(--gold)}
 
 /* ---------- funnel ---------- */
 .funnel{display:flex;flex-direction:column;gap:6px;align-items:center;width:100%}
@@ -662,6 +665,7 @@ strong{color:var(--bone);font-weight:600}
       <div class="panel stack"><div class="tag g">источники</div><p class="dim" style="margin:0">25 ссылок на листе «Источники» в рабочей таблице: Smart Ranking, РБК Тренды, РИА Новости, Первый канал, Контур, eLama, Фонтанка, SberCIB. Каждый факт в PEST закрыт публикацией.</p></div>
       <div class="panel stack"><div class="tag g">промты</div><p class="dim" style="margin:0">Все 8 промтов и то, что пришлось править руками, — на листе «Промты». Примерно треть выданных ИИ фактов оказалась неточной по датам и цифрам, каждый перепроверяли по первоисточнику.</p></div>
     </div>
+    <a class="sheet" href="https://docs.google.com/spreadsheets/d/1SjgTlSAzlwWdhQHxzzuLx0FahUJOW_P0l_le-mj2GZU/edit?usp=sharing" target="_blank" rel="noopener">Рабочая таблица PEST в Google Таблицах ↗</a>
     <p class="src">Данные актуальны на 10 сентября 2026 года.</p>
   </div>
 </section>
